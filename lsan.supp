@@ -1,0 +1,8 @@
+# lsan.supp — LeakSanitizer suppressions for known reachable allocations
+# in third-party libraries used by fre-framework.
+
+# quill backend thread — intentional long-lived allocation
+leak:quill::detail::BackendWorker
+
+# asio thread pool per-thread state — intentional lifetime
+leak:asio::detail::thread_info_base

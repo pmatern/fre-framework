@@ -1,0 +1,80 @@
+# fre-framework Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2026-03-15
+
+## Active Technologies
+- C++23 (GCC 14+ / Clang 18+) + Asio 1.30.2 (strand dispatch — unchanged), quill 4.5.0 (logging — unchanged), Catch2 3.7.1 (tests — unchanged). No new dependencies. (002-sync-submit-api)
+
+- **Language**: C++23 — GCC 14+ / Clang 18+ (primary); MSVC 19.40 optional
+- **Style**: Coroutines (`co_await`/`co_return`), C++23 Concepts, `std::expected<T,E>`, no exceptions, no RTTI
+- **Build**: CMake 3.28+ with presets; CPM.cmake for dependency management
+- **Coroutine executor**: Standalone Asio 1.30+ (`asio::strand` for shuffle-shard cells)
+- **ML inference**: ONNX Runtime 1.19.x (dynamic link, C API at ABI boundaries)
+- **Logging**: quill 4.x (lock-free SPSC hot path) + `{fmt}` formatting
+- **Testing**: Catch2 v3 (TDD with GIVEN/WHEN/THEN; `BENCHMARK` for latency regression)
+- **Serialization**: FlatBuffers (binary protocol); nlohmann/json (REST/debug only)
+- **Plugin ABI**: C vtable (`extern "C"` struct of function pointers) + `CppEvaluatorAdapter<Impl>` concept wrapper
+
+## Project Structure
+
+```text
+include/fre/          # Public headers (installed with library)
+  core/               # Event, Verdict, Decision, Error, Concepts
+  pipeline/           # Pipeline<Config> + PipelineConfig builder
+  stage/              # Per-stage headers (ingest, eval, inference, policy, emit)
+  evaluator/          # Built-in evaluators (allow/deny, threshold, ONNX)
+  state/              # WindowStore (in-process time-wheel + external store concept)
+  policy/             # Rule engine
+  sharding/           # TenantRouter (shuffle sharding + token bucket)
+src/                  # Implementation units
+service/              # Optional standalone service harness (fre-service binary)
+tests/
+  contract/           # Concept-satisfaction tests + contract conformance
+  integration/        # Full pipeline end-to-end tests
+  unit/               # Per-component unit tests
+examples/             # minimal_pipeline/, ml_pipeline/
+cmake/                # FreConfig.cmake.in, dependencies.cmake
+```
+
+## Commands
+
+```bash
+# Configure (debug)
+cmake --preset debug
+
+# Configure (release)
+cmake --preset release
+
+# Build
+cmake --build --preset debug
+
+# Run tests
+ctest --preset debug
+
+# Run tests with verbose output
+ctest --preset debug --output-on-failure
+
+# Build service harness
+cmake --build --preset release --target fre-service
+```
+
+## Code Style
+
+- **Error handling**: All fallible functions return `std::expected<T, E>`. Never throw. Never catch.
+- **Async**: Use `asio::awaitable<T>` for coroutines. Wrap returns in `Task<T,E>` for `std::expected` propagation.
+- **Concepts**: Define concept satisfaction with `static_assert(ConceptName<MyType>)` alongside the type.
+- **Plugins**: Same-binary evaluators satisfy concepts directly. Dynamic-load plugins use the C vtable.
+- **Includes**: Use `<fre/...>` paths in all code (mirrors the installed layout).
+- **Naming**: `snake_case` for functions and variables; `PascalCase` for types and concepts; `UPPER_SNAKE` for constants.
+- **No RTTI**: Do not use `dynamic_cast`, `typeid`, or `std::any`.
+- **No raw owning pointers**: Use `std::unique_ptr` / `std::shared_ptr`; prefer value semantics where possible.
+
+## Recent Changes
+- 002-sync-submit-api: Added C++23 (GCC 14+ / Clang 18+) + Asio 1.30.2 (strand dispatch — unchanged), quill 4.5.0 (logging — unchanged), Catch2 3.7.1 (tests — unchanged). No new dependencies.
+
+- **001-nrt-detection-pipeline**: Initial framework — pluggable 5-stage detection pipeline
+  (ingest → lightweight eval → ML inference → policy eval → decision emit), shuffle-sharded
+  multi-tenant isolation, in-process windowed aggregation with optional external state backend.
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->

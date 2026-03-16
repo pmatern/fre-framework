@@ -1,0 +1,11 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# Standalone Asio is header-only; consumers need it too
+find_dependency(asio QUIET)
+# If asio wasn't found via find_package, consumers must provide it themselves
+
+include("${CMAKE_CURRENT_LIST_DIR}/FreTargets.cmake")
+
+check_required_components(fre)

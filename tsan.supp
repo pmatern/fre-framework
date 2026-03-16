@@ -1,0 +1,15 @@
+# tsan.supp — ThreadSanitizer suppressions for known benign races
+# in third-party libraries used by fre-framework.
+#
+# Each entry MUST include a comment explaining why it is suppressed.
+
+# ─── quill ────────────────────────────────────────────────────────────────────
+# quill's lock-free SPSC ring uses relaxed atomics intentionally; TSan may
+# flag these as data races because it does not model all memory orderings.
+race:quill::detail::SPSCQueue
+race:quill::detail::BackendWorker
+
+# ─── asio ────────────────────────────────────────────────────────────────────
+# asio strand dispatch uses internal atomic flags that TSan may flag when
+# strands are destroyed while work is completing on another thread.
+race:asio::detail::strand_executor_service

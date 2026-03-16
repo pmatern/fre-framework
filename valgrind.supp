@@ -1,0 +1,48 @@
+# valgrind.supp — Suppressions for known false-positive Valgrind findings
+# in third-party libraries used by fre-framework.
+#
+# Add suppressions here when a finding is confirmed to be a library
+# implementation detail, not a framework bug. Each entry MUST include a
+# comment explaining why it is suppressed.
+
+# ─── quill (structured logger) ───────────────────────────────────────────────
+# quill's SPSC queue uses lock-free ring buffer operations that Valgrind's
+# helgrind/memcheck occasionally flags as uninitialised reads during startup
+# teardown. These are benign — quill guarantees barrier semantics internally.
+{
+   quill_spsc_queue_init
+   Memcheck:Value8
+   ...
+   fun:*quill*SPSCQueue*
+}
+
+{
+   quill_backend_thread_startup
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:*quill*BackendWorker*
+}
+
+# ─── asio (networking/scheduler) ─────────────────────────────────────────────
+# asio's io_context thread pool allocates internal per-thread state that is
+# intentionally kept alive for the process lifetime. Reported as "still
+# reachable" but this is by design.
+{
+   asio_thread_pool_reachable
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:*asio*thread_pool*
+}
+
+# ─── C++ runtime ─────────────────────────────────────────────────────────────
+# libstdc++/libc++ one-time initialisation suppressed globally — not
+# framework code.
+{
+   libstdcxx_once_init
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:__cxa_allocate_exception
+   ...
+}

@@ -1,0 +1,62 @@
+# Integration tests — full pipeline end-to-end
+
+fre_add_test(
+    TARGET fre_integration_minimal_pipeline
+    SOURCES test_minimal_pipeline.cpp
+)
+
+fre_add_test(
+    TARGET fre_integration_custom_evaluator
+    SOURCES test_custom_evaluator.cpp
+)
+
+fre_add_test(
+    TARGET fre_integration_windowed
+    SOURCES test_windowed_isolation.cpp
+)
+
+fre_add_test(
+    TARGET fre_integration_ml_inference
+    SOURCES test_ml_inference_stage.cpp
+)
+
+fre_add_test(
+    TARGET fre_integration_inference_timeout
+    SOURCES test_inference_timeout.cpp
+)
+
+fre_add_test(
+    TARGET fre_integration_policy_evaluation
+    SOURCES test_policy_evaluation.cpp
+)
+
+fre_add_test(
+    TARGET fre_integration_policy_config_validation
+    SOURCES test_policy_config_validation.cpp
+)
+
+fre_add_test(
+    TARGET fre_integration_external_store_fallback
+    SOURCES test_external_store_fallback.cpp
+)
+
+fre_add_test(
+    TARGET fre_integration_load_p99
+    SOURCES test_load_p99.cpp
+)
+
+fre_add_test(
+    TARGET fre_integration_sync_submit
+    SOURCES test_sync_submit_integration.cpp
+    TIMEOUT 120
+)
+
+if(FRE_BUILD_SERVICE)
+    add_executable(fre_integration_service_harness test_service_harness.cpp)
+    target_link_libraries(fre_integration_service_harness
+        PRIVATE fre::pipeline fre::service Catch2::Catch2WithMain)
+    target_compile_options(fre_integration_service_harness PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>)
+    catch_discover_tests(fre_integration_service_harness
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+endif()

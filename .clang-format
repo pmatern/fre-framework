@@ -1,0 +1,71 @@
+---
+Language: Cpp
+BasedOnStyle: Google
+Standard: c++23
+
+# Indentation
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+IndentCaseLabels: true
+IndentPPDirectives: AfterHash
+
+# Line length
+ColumnLimit: 100
+
+# Braces
+BreakBeforeBraces: Attach
+BraceWrapping:
+    AfterClass: false
+    AfterControlStatement: false
+    AfterFunction: false
+    AfterNamespace: false
+    AfterStruct: false
+    BeforeElse: false
+
+# Spacing
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesInAngles: Never
+SpacesInContainerLiterals: false
+SpaceAfterTemplateKeyword: true
+
+# Alignment
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignTrailingComments: true
+AlignAfterOpenBracket: Align
+
+# Include ordering
+IncludeBlocks: Regroup
+IncludeCategories:
+    - Regex: '^<fre/'
+      Priority: 1
+    - Regex: '^<asio'
+      Priority: 2
+    - Regex: '^<quill'
+      Priority: 2
+    - Regex: '^<catch2'
+      Priority: 2
+    - Regex: '^<'
+      Priority: 3
+
+# Namespace
+NamespaceIndentation: None
+CompactNamespaces: false
+
+# Sorting
+SortIncludes: CaseSensitive
+SortUsingDeclarations: true
+
+# Comments
+ReflowComments: false
+
+# Miscellaneous
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Left

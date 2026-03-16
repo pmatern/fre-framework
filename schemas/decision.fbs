@@ -1,0 +1,46 @@
+// FlatBuffers schema for fre::Decision records.
+// Generated C++ header: include/fre/service/decision_generated.h
+// Build: flatc --cpp --gen-object-api -o include/fre/service schemas/decision.fbs
+
+namespace fre.serial;
+
+/// Verdict values — must stay in sync with fre::Verdict enum.
+enum Verdict : byte {
+    Pass  = 0,
+    Flag  = 1,
+    Block = 2,
+}
+
+/// EvaluatorResult serialised form.
+table EvaluatorResult {
+    evaluator_id : string;
+    verdict      : Verdict = Pass;
+    reason_code  : string;
+    score        : float = -1.0;   // -1 = not set
+    skipped      : bool  = false;
+}
+
+/// One stage's aggregated output.
+table StageOutput {
+    stage_id          : string;
+    verdict           : Verdict = Pass;
+    elapsed_us        : uint64;
+    degraded_reason   : uint32;    // bitmask of DegradedReason flags
+    evaluator_results : [EvaluatorResult];
+}
+
+/// Top-level Decision record — matches fre::Decision fields.
+table Decision {
+    pipeline_id      : string;
+    pipeline_version : string;
+    event_id         : uint64;
+    tenant_id        : string;
+    entity_id        : string;
+    final_verdict    : Verdict = Pass;
+    elapsed_us       : uint64;
+    degraded_reason  : uint32;
+    decided_at_us    : int64;      // microseconds since Unix epoch
+    stage_outputs    : [StageOutput];
+}
+
+root_type Decision;

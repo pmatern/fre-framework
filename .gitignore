@@ -1,0 +1,76 @@
+# Build directories
+build/
+bin/
+obj/
+out/
+cmake-build-*/
+
+# Compiled objects and libraries
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+
+# CMake generated
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+_deps/
+
+# CPM cache
+.cpm/
+
+# IDE files
+.idea/
+.vscode/
+*.user
+*.suo
+*.sln.docstates
+.vs/
+*.xcodeproj/
+*.xcworkspace/
+
+# Clang tools
+.clang-tidy-cache/
+compile_commands.json
+
+# Test artifacts
+Testing/
+*.gcov
+*.gcda
+*.gcno
+coverage/
+lcov.info
+
+# Logs
+*.log
+*.log.*
+
+# Environment
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+*.swo
+*~
+
+# Distribution / packaging
+dist/
+*.tar.gz
+*.zip
+
+# ONNX models (large binaries)
+*.onnx
+
+# Conan/vcpkg
+conan/
+vcpkg_installed/

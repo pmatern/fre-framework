@@ -1,0 +1,2 @@
+add_subdirectory(minimal_pipeline)
+add_subdirectory(ml_pipeline)
