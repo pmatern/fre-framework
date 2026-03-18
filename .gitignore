@@ -37,6 +37,7 @@ _deps/
 
 # Clang tools
 .clang-tidy-cache/
+.cache/
 compile_commands.json
 
 # Test artifacts
