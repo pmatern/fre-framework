@@ -59,4 +59,24 @@ if(FRE_BUILD_SERVICE)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>)
     catch_discover_tests(fre_integration_service_harness
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
+    add_executable(fre_integration_fleet_routing test_fleet_routing.cpp)
+    target_link_libraries(fre_integration_fleet_routing
+        PRIVATE fre::pipeline fre::service Catch2::Catch2WithMain)
+    target_compile_options(fre_integration_fleet_routing PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>)
+    catch_discover_tests(fre_integration_fleet_routing
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        PROPERTIES TIMEOUT 60)
+endif()
+
+if(FRE_ENABLE_DUCKDB)
+    add_executable(fre_integration_duckdb_backend test_duckdb_backend.cpp)
+    target_link_libraries(fre_integration_duckdb_backend
+        PRIVATE fre::pipeline Catch2::Catch2WithMain)
+    target_compile_options(fre_integration_duckdb_backend PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>)
+    catch_discover_tests(fre_integration_duckdb_backend
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        PROPERTIES TIMEOUT 120)
 endif()

@@ -1,9 +1,10 @@
 # fre-framework Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-15
+Auto-generated from all feature plans. Last updated: 2026-03-17
 
 ## Active Technologies
 - C++23 (GCC 14+ / Clang 18+) + Asio 1.30.2 (strand dispatch — unchanged), quill 4.5.0 (logging — unchanged), Catch2 3.7.1 (tests — unchanged). No new dependencies. (002-sync-submit-api)
+- DuckDB v1.1.3 amalgamation (C API, static lib via CPMAddPackage) — opt-in via `FRE_ENABLE_DUCKDB=ON` / `cmake --preset duckdb`. (004-duckdb-external-storage)
 
 - **Language**: C++23 — GCC 14+ / Clang 18+ (primary); MSVC 19.40 optional
 - **Style**: Coroutines (`co_await`/`co_return`), C++23 Concepts, `std::expected<T,E>`, no exceptions, no RTTI
@@ -70,6 +71,8 @@ cmake --build --preset release --target fre-service
 - **No raw owning pointers**: Use `std::unique_ptr` / `std::shared_ptr`; prefer value semantics where possible.
 
 ## Recent Changes
+- 004-duckdb-external-storage: Added DuckDB v1.1.3 embedded store satisfying `StateStore` concept. Three-tier hot/warm/cold architecture. `cmake --preset duckdb` to enable. `DuckDbWindowStore` → `as_backend()` → `ExternalWindowStore` — no changes to fallback logic. `WindowedHistoricalEvaluator<Store>` for 30-day lookback. Do NOT call `query_range()` on the hot-path coroutine strand.
+- 003-fleet-shuffle-sharding: Added `FleetRouter` (same Vogels 2014 hash as `TenantRouter`). Non-owners return HTTP 503 + `X-Fre-Redirect-Hint`. Seeds in `include/fre/sharding/hash_seeds.hpp` — never change or duplicate. Use non-power-of-2 fleet sizes for strong isolation. Fleet enabled via `HarnessConfig::fleet_config` (optional).
 - 002-sync-submit-api: Added C++23 (GCC 14+ / Clang 18+) + Asio 1.30.2 (strand dispatch — unchanged), quill 4.5.0 (logging — unchanged), Catch2 3.7.1 (tests — unchanged). No new dependencies.
 
 - **001-nrt-detection-pipeline**: Initial framework — pluggable 5-stage detection pipeline

@@ -95,6 +95,22 @@
                 "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=thread",
                 "TSAN_OPTIONS": "halt_on_error=1:abort_on_error=1:suppressions=${sourceDir}/tsan.supp"
             }
+        },
+        {
+            "name": "duckdb",
+            "displayName": "Debug + DuckDB analytical backend",
+            "inherits": "debug",
+            "cacheVariables": {
+                "FRE_ENABLE_DUCKDB": "ON"
+            }
+        },
+        {
+            "name": "duckdb-release",
+            "displayName": "Release + DuckDB analytical backend",
+            "inherits": "release",
+            "cacheVariables": {
+                "FRE_ENABLE_DUCKDB": "ON"
+            }
         }
     ],
     "buildPresets": [
@@ -129,6 +145,14 @@
         {
             "name": "tsan",
             "configurePreset": "tsan"
+        },
+        {
+            "name": "duckdb",
+            "configurePreset": "duckdb"
+        },
+        {
+            "name": "duckdb-release",
+            "configurePreset": "duckdb-release"
         }
     ],
     "testPresets": [
@@ -175,6 +199,16 @@
             "configurePreset": "tsan",
             "output": {
                 "outputOnFailure": true
+            }
+        },
+        {
+            "name": "duckdb",
+            "configurePreset": "duckdb",
+            "output": {
+                "outputOnFailure": true
+            },
+            "execution": {
+                "timeout": 300
             }
         }
     ]

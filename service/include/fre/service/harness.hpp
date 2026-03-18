@@ -14,11 +14,13 @@
 
 #include <fre/pipeline/pipeline.hpp>
 #include <fre/pipeline/pipeline_config.hpp>
+#include <fre/service/fleet_router.hpp>
 
 #include <asio/io_context.hpp>
 #include <nlohmann/json.hpp>
 
 #include <atomic>
+#include <optional>
 #include <string>
 #include <thread>
 
@@ -27,10 +29,11 @@ namespace fre::service {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 struct HarnessConfig {
-    std::string    bind_address{"127.0.0.1"};
-    uint16_t       port{8080};
-    std::string    pipeline_config_path;  ///< Path to JSON config file
-    PipelineConfig pipeline_config;       ///< Used if pipeline_config_path is empty
+    std::string               bind_address{"127.0.0.1"};
+    uint16_t                  port{8080};
+    std::string               pipeline_config_path;  ///< Path to JSON config file
+    PipelineConfig            pipeline_config;        ///< Used if pipeline_config_path is empty
+    std::optional<FleetConfig> fleet_config;          ///< Fleet sharding (absent = accept all)
 };
 
 // ─── ServiceHarness ──────────────────────────────────────────────────────────

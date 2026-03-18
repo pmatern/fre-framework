@@ -50,6 +50,7 @@ enum class StoreErrorCode : uint8_t {
     Timeout,
     CasFailed,
     SerializationError,
+    QueryRangeError,
 };
 
 struct StoreError {
@@ -106,6 +107,21 @@ struct PipelineError {
     [[nodiscard]] std::string message() const;
 };
 
+// ─── FleetRoutingError ───────────────────────────────────────────────────────
+
+enum class FleetRoutingErrorCode : uint8_t {
+    NotOwner,            ///< This instance is not in the tenant's owner set
+    TopologyUnavailable, ///< Fleet topology is not configured
+};
+
+struct FleetRoutingError {
+    FleetRoutingErrorCode code;
+    std::string           tenant_id;
+    std::string           redirect_hint; ///< Comma-separated owner addresses (may be empty)
+
+    [[nodiscard]] std::string message() const;
+};
+
 // ─── Error variant ───────────────────────────────────────────────────────────
 
 using Error = std::variant<
@@ -114,7 +130,8 @@ using Error = std::variant<
     StoreError,
     EmissionError,
     RateLimitError,
-    PipelineError>;
+    PipelineError,
+    FleetRoutingError>;
 
 [[nodiscard]] inline std::string error_message(const Error& e) {
     return std::visit([](const auto& v) { return v.message(); }, e);

@@ -1,4 +1,5 @@
 #include <fre/sharding/tenant_router.hpp>
+#include <fre/sharding/hash_seeds.hpp>
 
 #include <algorithm>
 #include <array>
@@ -18,11 +19,7 @@ namespace {
 //
 // For each i in [0, K), compute H_i(tenant_id, seed_i) % N, ensuring no duplicates.
 // Based on AWS shuffle sharding (Vogels 2014).
-
-constexpr uint32_t k_hash_seeds[] = {
-    0x9e3779b9u, 0x6c62272eu, 0x94d049bbu, 0xe9546b25u,
-    0x12e15e35u, 0x3b1d8f2bu, 0x7c9e4ab3u, 0x4f5a1c9fu,
-};
+// Seeds are defined in <fre/sharding/hash_seeds.hpp> and shared with FleetRouter.
 
 [[nodiscard]] std::vector<uint32_t> assign_cells(
     std::string_view tenant_id, uint32_t num_cells, uint32_t cells_per_tenant) {

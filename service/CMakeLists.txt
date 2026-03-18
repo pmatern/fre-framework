@@ -2,6 +2,7 @@
 
 add_library(fre_service_lib STATIC
     src/harness.cpp
+    src/fleet_router.cpp
     ../src/service/decision_serializer.cpp
 )
 

@@ -86,3 +86,40 @@ endif()
 if(FRE_ENABLE_ONNX)
     find_package(onnxruntime 1.19 REQUIRED)
 endif()
+
+# ─── DuckDB (optional, analytical external state backend) ─────────────────────
+#
+# Uses the DuckDB amalgamation (single .cpp + .h) to avoid the full DuckDB
+# CMake build which has many sub-projects.  The amalgamation is MIT-licensed.
+#
+# Note: The amalgamation build is large (~5 min cold, ~200 MB object file).
+#       CI should cache ${CMAKE_SOURCE_DIR}/_deps (or CPM_SOURCE_CACHE).
+if(FRE_ENABLE_DUCKDB)
+    CPMAddPackage(
+        NAME duckdb
+        VERSION 1.1.3
+        URL "https://github.com/duckdb/duckdb/releases/download/v1.1.3/libduckdb-src.zip"
+        DOWNLOAD_ONLY YES
+    )
+
+    if(duckdb_ADDED)
+        add_library(duckdb_amalgamation STATIC
+            "${duckdb_SOURCE_DIR}/duckdb.cpp"
+        )
+        add_library(duckdb::duckdb ALIAS duckdb_amalgamation)
+
+        target_include_directories(duckdb_amalgamation
+            PUBLIC "${duckdb_SOURCE_DIR}"
+        )
+
+        # Suppress warnings inside the amalgamation (not our code)
+        target_compile_options(duckdb_amalgamation PRIVATE
+            $<$<CXX_COMPILER_ID:GNU,Clang>:-w>
+        )
+
+        find_package(Threads REQUIRED)
+        target_link_libraries(duckdb_amalgamation
+            PUBLIC Threads::Threads ${CMAKE_DL_LIBS}
+        )
+    endif()
+endif()

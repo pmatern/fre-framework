@@ -22,6 +22,7 @@ option(FRE_BUILD_TESTS    "Build tests"              ON)
 option(FRE_BUILD_EXAMPLES "Build examples"           ON)
 option(FRE_BUILD_SERVICE  "Build service harness"    ON)
 option(FRE_ENABLE_ONNX    "Enable ML inference stage (requires ONNX Runtime)" OFF)
+option(FRE_ENABLE_DUCKDB  "Enable DuckDB analytical state backend" OFF)
 option(FRE_CLANG_TIDY     "Enable clang-tidy during build (warnings-as-errors)" OFF)
 
 # ─── Version header ──────────────────────────────────────────────────────────
@@ -99,6 +100,14 @@ if(FRE_ENABLE_ONNX)
     )
     target_link_libraries(fre_pipeline PUBLIC onnxruntime)
     target_compile_definitions(fre_pipeline PUBLIC FRE_ENABLE_ONNX)
+endif()
+
+if(FRE_ENABLE_DUCKDB)
+    target_sources(fre_pipeline PRIVATE
+        src/state/duckdb_window_store.cpp
+    )
+    target_link_libraries(fre_pipeline PUBLIC duckdb::duckdb)
+    target_compile_definitions(fre_pipeline PUBLIC FRE_ENABLE_DUCKDB)
 endif()
 
 # ─── Service harness ─────────────────────────────────────────────────────────

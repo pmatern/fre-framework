@@ -4,6 +4,7 @@
 #include <fre/service/harness.hpp>
 #include <fre/core/logging.hpp>
 #include <fre/pipeline/pipeline_config.hpp>
+#include <fre/service/fleet_router.hpp>
 
 #include <asio/connect.hpp>
 #include <asio/io_context.hpp>
@@ -30,12 +31,13 @@ using json = nlohmann::json;
 // ─── ServiceHarness::Impl ────────────────────────────────────────────────────
 
 struct ServiceHarness::Impl {
-    HarnessConfig              config;
-    fre::Pipeline              pipeline;
-    asio::io_context           ioc;
-    asio::ip::tcp::acceptor    acceptor{ioc};
-    std::thread                io_thread;
-    std::atomic<bool>          running{false};
+    HarnessConfig                    config;
+    fre::Pipeline                    pipeline;
+    std::optional<FleetRouter>       fleet_router;
+    asio::io_context                 ioc;
+    asio::ip::tcp::acceptor          acceptor{ioc};
+    std::thread                      io_thread;
+    std::atomic<bool>                running{false};
 
     explicit Impl(HarnessConfig cfg)
         : config{std::move(cfg)}
@@ -46,6 +48,9 @@ struct ServiceHarness::Impl {
             }
             return std::move(config.pipeline_config);
           }()}
+        , fleet_router{config.fleet_config
+                           ? std::make_optional<FleetRouter>(*config.fleet_config)
+                           : std::nullopt}
     {}
 
     static void handle_connection(asio::ip::tcp::socket sock, Impl& impl);
@@ -159,6 +164,21 @@ void ServiceHarness::Impl::handle_connection(asio::ip::tcp::socket sock, Impl& i
                 event.entity_id  = entity_id;
                 event.event_type = event_type;
 
+                // Fleet ownership gate — reject if this instance doesn't own the tenant.
+                if (impl.fleet_router && !impl.fleet_router->owns(tenant_id)) {
+                    const std::string hint = impl.fleet_router->redirect_hint(tenant_id);
+                    std::ostringstream hdr;
+                    hdr << "HTTP/1.1 503 Service Unavailable\r\n"
+                        << "Content-Type: text/plain\r\n"
+                        << "Content-Length: 14\r\n";
+                    if (!hint.empty()) {
+                        hdr << "X-Fre-Redirect-Hint: " << hint << "\r\n";
+                    }
+                    hdr << "Connection: close\r\n\r\nnot owner here";
+                    asio::write(sock, asio::buffer(hdr.str()), ec);
+                    return;
+                }
+
                 auto result = impl.pipeline.submit(event);
                 if (result.has_value()) {
                     asio::write(sock, asio::buffer(
@@ -171,6 +191,17 @@ void ServiceHarness::Impl::handle_connection(asio::ip::tcp::socket sock, Impl& i
             } catch (const json::parse_error& e) {
                 asio::write(sock, asio::buffer(
                     http_response(400, "Bad Request", "text/plain", e.what())), ec);
+            }
+
+        } else if (req.method == "GET" && req.path == "/topology") {
+            if (impl.fleet_router) {
+                asio::write(sock, asio::buffer(
+                    http_response(200, "OK", "application/json",
+                                  impl.fleet_router->topology_json())), ec);
+            } else {
+                asio::write(sock, asio::buffer(
+                    http_response(200, "OK", "application/json",
+                                  R"({"fleet_routing":"disabled"})")), ec);
             }
 
         } else if (req.method == "GET" && req.path == "/health") {

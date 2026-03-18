@@ -42,3 +42,23 @@ fre_add_test(
     SOURCES test_sync_submit.cpp
     TIMEOUT 60
 )
+
+if(FRE_BUILD_SERVICE)
+    add_executable(fre_unit_fleet_router test_fleet_router.cpp)
+    target_link_libraries(fre_unit_fleet_router
+        PRIVATE fre::pipeline fre::service Catch2::Catch2WithMain)
+    target_compile_options(fre_unit_fleet_router PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>)
+    catch_discover_tests(fre_unit_fleet_router
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+endif()
+
+if(FRE_ENABLE_DUCKDB)
+    add_executable(fre_unit_duckdb_window_store test_duckdb_window_store.cpp)
+    target_link_libraries(fre_unit_duckdb_window_store
+        PRIVATE fre::pipeline Catch2::Catch2WithMain)
+    target_compile_options(fre_unit_duckdb_window_store PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>)
+    catch_discover_tests(fre_unit_duckdb_window_store
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+endif()

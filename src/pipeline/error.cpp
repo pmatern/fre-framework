@@ -45,6 +45,7 @@ std::string StoreError::message() const {
             case StoreErrorCode::Timeout:             return "Timeout";
             case StoreErrorCode::CasFailed:           return "CasFailed";
             case StoreErrorCode::SerializationError:  return "SerializationError";
+            case StoreErrorCode::QueryRangeError:     return "QueryRangeError";
             default:                                   return "Unknown";
         }
     }();
@@ -88,6 +89,21 @@ std::string PipelineError::message() const {
         }
     }();
     return detail.empty() ? code_str : std::format("{}: {}", code_str, detail);
+}
+
+std::string FleetRoutingError::message() const {
+    const char* code_str = [&] {
+        switch (code) {
+            case FleetRoutingErrorCode::NotOwner:            return "FleetNotOwner";
+            case FleetRoutingErrorCode::TopologyUnavailable: return "TopologyUnavailable";
+            default:                                          return "Unknown";
+        }
+    }();
+    if (redirect_hint.empty()) {
+        return tenant_id.empty() ? code_str
+                                 : std::format("{}[{}]", code_str, tenant_id);
+    }
+    return std::format("{}[{}] hint={}", code_str, tenant_id, redirect_hint);
 }
 
 }  // namespace fre
