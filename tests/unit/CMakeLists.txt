@@ -43,6 +43,11 @@ fre_add_test(
     TIMEOUT 60
 )
 
+fre_add_test(
+    TARGET fre_unit_policy_leaf_nodes
+    SOURCES test_policy_leaf_nodes.cpp
+)
+
 if(FRE_BUILD_SERVICE)
     add_executable(fre_unit_fleet_router test_fleet_router.cpp)
     target_link_libraries(fre_unit_fleet_router
