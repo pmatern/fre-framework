@@ -51,6 +51,12 @@ fre_add_test(
     TIMEOUT 120
 )
 
+fre_add_test(
+    TARGET fre_integration_policy_leaf_nodes
+    SOURCES test_policy_leaf_node_integration.cpp
+    TIMEOUT 60
+)
+
 if(FRE_BUILD_SERVICE)
     add_executable(fre_integration_service_harness test_service_harness.cpp)
     target_link_libraries(fre_integration_service_harness
