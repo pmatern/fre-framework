@@ -50,7 +50,6 @@ target_sources(fre_pipeline PRIVATE
     src/stage/inference_stage.cpp
     src/evaluator/allow_deny_evaluator.cpp
     src/evaluator/plugin_loader.cpp
-    src/evaluator/threshold_evaluator.cpp
     src/state/window_store.cpp
     src/state/external_store.cpp
     src/policy/rule_engine.cpp
@@ -105,8 +104,9 @@ endif()
 if(FRE_ENABLE_DUCKDB)
     target_sources(fre_pipeline PRIVATE
         src/state/duckdb_window_store.cpp
+        src/state/write_back_window_store.cpp
     )
-    target_link_libraries(fre_pipeline PUBLIC duckdb::duckdb)
+    target_link_libraries(fre_pipeline PUBLIC $<BUILD_INTERFACE:duckdb::duckdb>)
     target_compile_definitions(fre_pipeline PUBLIC FRE_ENABLE_DUCKDB)
 endif()
 

@@ -28,8 +28,11 @@
 #include <chrono>
 #include <expected>
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace fre {
 
@@ -92,6 +95,20 @@ public:
     /// The returned backend holds a raw pointer to this store — the caller must
     /// ensure this DuckDbWindowStore outlives the backend.
     [[nodiscard]] ExternalStoreBackend as_backend();
+
+    // ─── Write-back support ───────────────────────────────────────────────────
+
+    /// Bulk-upsert entries unconditionally (no version guard).
+    /// InProcessWindowStore is authoritative; called exclusively by WriteBackWindowStore
+    /// flush loop to persist dirty in-memory entries in one transaction.
+    [[nodiscard]] std::expected<void, StoreError>
+    upsert_batch(std::span<const std::pair<WindowKey, WindowValue>> entries);
+
+    /// Return every row currently in the warm tier.
+    /// Called once at WriteBackWindowStore construction for startup recovery.
+    /// Uses the dedicated read connection; does not block the hot-path connection.
+    [[nodiscard]] std::expected<std::vector<std::pair<WindowKey, WindowValue>>, StoreError>
+    scan_warm_tier();
 
     // ─── Long-horizon analytical query ────────────────────────────────────────
 

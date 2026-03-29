@@ -48,7 +48,7 @@ struct StmtHandle {
     StmtHandle() = default;
     StmtHandle(const StmtHandle&) = delete;
     StmtHandle& operator=(const StmtHandle&) = delete;
-    ~StmtHandle() { if (stmt) duckdb_destroy_prepared(&stmt); }
+    ~StmtHandle() { if (stmt) duckdb_destroy_prepare(&stmt); }
 };
 
 struct ResultHandle {
@@ -348,6 +348,124 @@ std::expected<void, StoreError> DuckDbWindowStore::expire(const WindowKey& key) 
     rh.valid = true;
     return {};
 }
+
+// ─── Helper: read varchar column from result row ──────────────────────────────
+
+namespace {
+std::string read_varchar(duckdb_result& r, idx_t col, idx_t row) {
+    char* c = duckdb_value_varchar(&r, col, row);
+    if (!c) return {};
+    std::string s{c};
+    duckdb_free(c);
+    return s;
+}
+}  // namespace
+
+// ─── upsert_batch ─────────────────────────────────────────────────────────────
+
+std::expected<void, StoreError>
+DuckDbWindowStore::upsert_batch(std::span<const std::pair<WindowKey, WindowValue>> entries)
+{
+    if (!is_available()) {
+        return std::unexpected(StoreError{StoreErrorCode::Unavailable, "DuckDB unavailable"});
+    }
+    if (entries.empty()) return {};
+
+    std::lock_guard<std::mutex> lock{impl_->mutex_};
+
+    ResultHandle begin_rh;
+    if (duckdb_query(impl_->conn.conn, "BEGIN", &begin_rh.result) == DuckDBError) {
+        begin_rh.valid = true;
+        return std::unexpected(StoreError{StoreErrorCode::Unavailable, "upsert_batch BEGIN failed"});
+    }
+    begin_rh.valid = true;
+
+    for (const auto& [key, val] : entries) {
+        StmtHandle sh;
+        if (duckdb_prepare(impl_->conn.conn,
+                "INSERT INTO window_state"
+                " (tenant_id, entity_id, window_name, epoch, aggregate, version, updated_at)"
+                " VALUES ($1, $2, $3, $4, $5, $6, now())"
+                " ON CONFLICT (tenant_id, entity_id, window_name, epoch)"
+                " DO UPDATE SET aggregate=EXCLUDED.aggregate,"
+                "               version=EXCLUDED.version,"
+                "               updated_at=now()",
+                &sh.stmt) == DuckDBError)
+        {
+            duckdb_query(impl_->conn.conn, "ROLLBACK", nullptr);
+            return std::unexpected(StoreError{StoreErrorCode::Unavailable, "upsert prepare failed"});
+        }
+        duckdb_bind_varchar(sh.stmt, 1, key.tenant_id.c_str());
+        duckdb_bind_varchar(sh.stmt, 2, key.entity_id.c_str());
+        duckdb_bind_varchar(sh.stmt, 3, key.window_name.c_str());
+        duckdb_bind_uint64 (sh.stmt, 4, key.epoch);
+        duckdb_bind_double (sh.stmt, 5, val.aggregate);
+        duckdb_bind_uint64 (sh.stmt, 6, val.version);
+
+        ResultHandle rh;
+        if (duckdb_execute_prepared(sh.stmt, &rh.result) == DuckDBError) {
+            rh.valid = true;
+            duckdb_query(impl_->conn.conn, "ROLLBACK", nullptr);
+            return std::unexpected(StoreError{
+                StoreErrorCode::Unavailable, duckdb_result_error(&rh.result)});
+        }
+        rh.valid = true;
+    }
+
+    ResultHandle commit_rh;
+    if (duckdb_query(impl_->conn.conn, "COMMIT", &commit_rh.result) == DuckDBError) {
+        commit_rh.valid = true;
+        duckdb_query(impl_->conn.conn, "ROLLBACK", nullptr);
+        return std::unexpected(StoreError{StoreErrorCode::Unavailable, "upsert_batch COMMIT failed"});
+    }
+    commit_rh.valid = true;
+    return {};
+}
+
+// ─── scan_warm_tier ───────────────────────────────────────────────────────────
+
+std::expected<std::vector<std::pair<WindowKey, WindowValue>>, StoreError>
+DuckDbWindowStore::scan_warm_tier()
+{
+    if (!is_available()) {
+        return std::unexpected(StoreError{StoreErrorCode::Unavailable, "DuckDB unavailable"});
+    }
+
+    std::lock_guard<std::mutex> lock{impl_->query_mutex_};
+
+    ResultHandle rh;
+    if (duckdb_query(impl_->query_conn.conn,
+            "SELECT tenant_id, entity_id, window_name, epoch, aggregate, version"
+            " FROM window_state",
+            &rh.result) == DuckDBError) {
+        rh.valid = true;
+        return std::unexpected(StoreError{
+            StoreErrorCode::QueryRangeError, duckdb_result_error(&rh.result)});
+    }
+    rh.valid = true;
+
+    std::vector<std::pair<WindowKey, WindowValue>> out;
+    const idx_t row_count = duckdb_row_count(&rh.result);
+    out.reserve(static_cast<std::size_t>(row_count));
+
+    for (idx_t row = 0; row < row_count; ++row) {
+        WindowKey key;
+        key.tenant_id   = read_varchar(rh.result, 0, row);
+        key.entity_id   = read_varchar(rh.result, 1, row);
+        key.window_name = read_varchar(rh.result, 2, row);
+        key.epoch       = duckdb_value_uint64(&rh.result, 3, row);
+
+        WindowValue val;
+        val.aggregate = duckdb_value_double(&rh.result, 4, row);
+        val.version   = duckdb_value_uint64(&rh.result, 5, row);
+
+        out.emplace_back(std::move(key), val);
+    }
+
+    return out;
+}
+
+// ─── as_backend ───────────────────────────────────────────────────────────────
 
 ExternalStoreBackend DuckDbWindowStore::as_backend() {
     return ExternalStoreBackend{
