@@ -102,8 +102,12 @@ private:
     double      threshold_;
 };
 
-// Concept satisfaction check (requires a RangeQueryStore type to verify against)
-// Uncomment once DuckDbWindowStore is available:
-// static_assert(LightweightEvaluator<WindowedHistoricalEvaluator<DuckDbWindowStore>>);
+// Concept satisfaction checks
+#ifdef FRE_ENABLE_DUCKDB
+#include <fre/state/duckdb_window_store.hpp>
+#include <fre/state/write_back_window_store.hpp>
+static_assert(LightweightEvaluator<WindowedHistoricalEvaluator<DuckDbWindowStore>>);
+static_assert(LightweightEvaluator<WindowedHistoricalEvaluator<WriteBackWindowStore>>);
+#endif
 
 }  // namespace fre
