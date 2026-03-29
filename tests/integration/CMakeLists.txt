@@ -77,6 +77,15 @@ if(FRE_BUILD_SERVICE)
 endif()
 
 if(FRE_ENABLE_DUCKDB)
+    add_executable(fre_integration_write_back_pipeline test_write_back_pipeline.cpp)
+    target_link_libraries(fre_integration_write_back_pipeline
+        PRIVATE fre::pipeline Catch2::Catch2WithMain)
+    target_compile_options(fre_integration_write_back_pipeline PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>)
+    catch_discover_tests(fre_integration_write_back_pipeline
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        PROPERTIES TIMEOUT 120)
+
     add_executable(fre_integration_duckdb_backend test_duckdb_backend.cpp)
     target_link_libraries(fre_integration_duckdb_backend
         PRIVATE fre::pipeline Catch2::Catch2WithMain)
