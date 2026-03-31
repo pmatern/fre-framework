@@ -23,7 +23,9 @@ std::expected<StageOutput, Error> IngestStage::process(const Event& event) {
             .evaluator_id = "ingest_validator",
             .verdict      = Verdict::Pass,
             .reason_code  = "invalid_event_fields",
+            .score        = {},
             .skipped      = false,
+            .metadata     = {},
         });
 
         const auto elapsed = std::chrono::steady_clock::now() - start;
@@ -44,12 +46,17 @@ std::expected<StageOutput, Error> IngestStage::process(const Event& event) {
             .evaluator_id = "ingest_skew_check",
             .verdict      = Verdict::Flag,
             .reason_code  = "late_arrival",
+            .score        = {},
+            .metadata     = {},
         });
         out.verdict = Verdict::Flag;
     } else {
         out.evaluator_results.push_back(EvaluatorResult{
             .evaluator_id = "ingest_validator",
             .verdict      = Verdict::Pass,
+            .reason_code  = {},
+            .score        = {},
+            .metadata     = {},
         });
         out.verdict = Verdict::Pass;
     }

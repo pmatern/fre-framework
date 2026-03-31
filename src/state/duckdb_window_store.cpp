@@ -91,7 +91,17 @@ struct DuckDbWindowStore::Impl {
         if (duckdb_connect(db.db, &conn.conn) == DuckDBError) return;
         if (duckdb_connect(db.db, &query_conn.conn) == DuckDBError) return;
 
+        // DuckDB 1.4+ moved aggregate/scalar functions to the core_functions extension.
+        // Enable auto-loading so SUM, COALESCE, etc. are available without explicit LOAD.
+        // These are built-in extensions (no network needed); autoinstall covers fresh envs.
+        const char* ext_sql =
+            "SET autoinstall_known_extensions=1;"
+            "SET autoload_known_extensions=1";
+        if (!exec_sql(conn.conn, ext_sql).empty()) return;
+        if (!exec_sql(query_conn.conn, ext_sql).empty()) return;
+
         // Create schema
+        // Note: no updated_at column — now() moved to core_functions ext in DuckDB 1.4+.
         const std::string ddl =
             "CREATE TABLE IF NOT EXISTS window_state ("
             "  tenant_id   VARCHAR  NOT NULL,"
@@ -100,7 +110,6 @@ struct DuckDbWindowStore::Impl {
             "  epoch       UBIGINT  NOT NULL,"
             "  aggregate   DOUBLE   NOT NULL DEFAULT 0.0,"
             "  version     UBIGINT  NOT NULL DEFAULT 0,"
-            "  updated_at  TIMESTAMP NOT NULL DEFAULT now(),"
             "  PRIMARY KEY (tenant_id, entity_id, window_name, epoch)"
             ")";
         const auto err = exec_sql(conn.conn, ddl.c_str());
@@ -262,8 +271,8 @@ std::expected<bool, StoreError> DuckDbWindowStore::compare_and_swap(
     StmtHandle insert_sh;
     if (duckdb_prepare(impl_->conn.conn,
             "INSERT INTO window_state (tenant_id, entity_id, window_name, epoch,"
-            " aggregate, version, updated_at)"
-            " VALUES ($1, $2, $3, $4, 0.0, 0, now())"
+            " aggregate, version)"
+            " VALUES ($1, $2, $3, $4, 0.0, 0)"
             " ON CONFLICT DO NOTHING",
             &insert_sh.stmt) == DuckDBError)
     {
@@ -288,7 +297,7 @@ std::expected<bool, StoreError> DuckDbWindowStore::compare_and_swap(
     StmtHandle upd_sh;
     if (duckdb_prepare(impl_->conn.conn,
             "UPDATE window_state"
-            " SET aggregate=$1, version=$2, updated_at=now()"
+            " SET aggregate=$1, version=$2"
             " WHERE tenant_id=$3 AND entity_id=$4 AND window_name=$5"
             "   AND epoch=$6 AND version=$7",
             &upd_sh.stmt) == DuckDBError)
@@ -384,12 +393,11 @@ DuckDbWindowStore::upsert_batch(std::span<const std::pair<WindowKey, WindowValue
         StmtHandle sh;
         if (duckdb_prepare(impl_->conn.conn,
                 "INSERT INTO window_state"
-                " (tenant_id, entity_id, window_name, epoch, aggregate, version, updated_at)"
-                " VALUES ($1, $2, $3, $4, $5, $6, now())"
+                " (tenant_id, entity_id, window_name, epoch, aggregate, version)"
+                " VALUES ($1, $2, $3, $4, $5, $6)"
                 " ON CONFLICT (tenant_id, entity_id, window_name, epoch)"
                 " DO UPDATE SET aggregate=EXCLUDED.aggregate,"
-                "               version=EXCLUDED.version,"
-                "               updated_at=now()",
+                "               version=EXCLUDED.version",
                 &sh.stmt) == DuckDBError)
         {
             duckdb_query(impl_->conn.conn, "ROLLBACK", nullptr);

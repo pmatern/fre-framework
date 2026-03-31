@@ -3,6 +3,15 @@
 #include <cstdint>
 #include <memory>
 
+// ─── Minimal stop_token / stop_source ────────────────────────────────────────
+// Provided because Apple Clang 16 ships without std::stop_token.
+// If the standard library has it, use std::stop_token instead.
+// NOTE: the #include must be at global scope — inside namespace fre{} it would
+// inject all of <stop_token>'s internals into fre::std.
+#if defined(__cpp_lib_jthread) && __cpp_lib_jthread >= 201911L
+#  include <stop_token>
+#endif
+
 namespace fre {
 
 /// Typed error returned by Pipeline::submit_sync().
@@ -15,12 +24,7 @@ enum class SubmitSyncError : uint8_t {
     Cancelled,
 };
 
-// ─── Minimal stop_token / stop_source ────────────────────────────────────────
-// Provided because Apple Clang 16 ships without std::stop_token.
-// If the standard library has it, use std::stop_token instead.
-
 #if defined(__cpp_lib_jthread) && __cpp_lib_jthread >= 201911L
-#  include <stop_token>
 namespace detail { using StopState = void; }
 using StopToken  = std::stop_token;
 using StopSource = std::stop_source;

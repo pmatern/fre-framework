@@ -1,19 +1,22 @@
 # fre-framework Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-26
+Auto-generated from all feature plans. Last updated: 2026-03-29
 
 ## Active Technologies
-- C++23 (GCC 14+ / Clang 18+) + Asio 1.30.2 (strand dispatch — unchanged), quill 4.5.0 (logging — unchanged), Catch2 3.7.1 (tests — unchanged). No new dependencies. (002-sync-submit-api)
-- DuckDB v1.1.3 amalgamation (C API, static lib via CPMAddPackage) — opt-in via `FRE_ENABLE_DUCKDB=ON` / `cmake --preset duckdb`. (004-duckdb-external-storage)
+- C++23 (GCC 14+ / Clang 18+) + Asio 1.30.2 (strand dispatch — unchanged), spdlog 1.14.1 (logging), Catch2 3.7.1 (tests — unchanged). No new dependencies. (002-sync-submit-api)
+- DuckDB v1.4.0 amalgamation (C API, static lib via CPMAddPackage) — opt-in via `FRE_ENABLE_DUCKDB=ON` / `cmake --preset duckdb`. (004-duckdb-external-storage)
 - **Language**: C++23 — GCC 14+ / Clang 18+ (primary); MSVC 19.40 optional
 - **Style**: Coroutines (`co_await`/`co_return`), C++23 Concepts, `std::expected<T,E>`, no exceptions, no RTTI
 - **Build**: CMake 3.28+ with presets; CPM.cmake for dependency management
 - **Coroutine executor**: Standalone Asio 1.30+ (`asio::strand` for shuffle-shard cells)
 - **ML inference**: ONNX Runtime 1.19.x (dynamic link, C API at ABI boundaries)
-- **Logging**: quill 4.x (lock-free SPSC hot path) + `{fmt}` formatting
+- **Logging**: spdlog 1.14.1 (async logger, `{fmt}` format strings)
 - **Testing**: Catch2 v3 (TDD with GIVEN/WHEN/THEN; `BENCHMARK` for latency regression)
 - **Serialization**: FlatBuffers (binary protocol); nlohmann/json (REST/debug only)
 - **Plugin ABI**: C vtable (`extern "C"` struct of function pointers) + `CppEvaluatorAdapter<Impl>` concept wrapper
+- C++23 — GCC 14+ / Clang 18+ + Catch2 v3.7.1 (benchmark + test macros), DuckDB v1.1.3 (WriteBackWindowStore warm tier), Asio 1.30.2 (pipeline executor) — all pre-existing; no new dependencies (007-realistic-perf-tests)
+- On-disk DuckDB via `DuckDbWindowStore` (`DuckDbConfig::db_path` = temp file); cleaned up after each tes (007-realistic-perf-tests)
+- On-disk DuckDB via `DuckDbWindowStore` (`DuckDbConfig::db_path` = temp file); deny-list written to second temp file; both cleaned up after each tes (007-realistic-perf-tests)
 
 ## Project Structure
 
@@ -70,10 +73,8 @@ cmake --build --preset release --target fre-service
 - **No raw owning pointers**: Use `std::unique_ptr` / `std::shared_ptr`; prefer value semantics where possible.
 
 ## Recent Changes
+- 007-realistic-perf-tests: Added two DuckDB-backed performance tests (`FRE_ENABLE_DUCKDB=ON` only): `tests/unit/test_realistic_latency_benchmark.cpp` (Catch2 `BENCHMARK`, P99 measurement with real `AllowDenyEvaluator` + `ThresholdEvaluator<WriteBackWindowStore>` + on-disk DuckDB) and `tests/integration/test_realistic_load_p99.cpp` (10 tenants × 3000 events, P99 ≤ 500ms assertion, per-tenant `Flag`/`Block` verdict checks). Both use PID-based temp file naming and RAII `TempFileGuard` cleanup. The 500ms budget is a conservative CI estimate only — sustained P99 > 300ms in stable conditions is a production constitution violation.
 - 006-write-back-window-store: `WriteBackWindowStore` inverts the DuckDB hot-path relationship — `InProcessWindowStore` is now the authoritative store (< 1ms always); DuckDB is flushed asynchronously in batches by a background `jthread`. Startup recovery seeds in-memory state from DuckDB warm tier. `ThresholdEvaluator<Store>` now a template on `StateStore`. Use `WriteBackWindowStore` instead of `ExternalWindowStore` for new pipelines with DuckDB. `query_range()` flushes dirty entries before querying.
-- 005-policy-leaf-nodes: Added 16 new `PolicyRule` leaf node types across 4 groups — tag string matching (`TagContains`, `TagStartsWith`, `TagIn`, `TagExists`), numeric tag comparisons (`TagValueLessThan`, `TagValueGreaterThan`, `TagValueBetween`), first-class Event field matching (`EventTypeIs`, `EventTypeIn`, `TenantIs`, `EventOlderThan`, `EventNewerThan`), and evaluator health/score range (`EvaluatorScoreBetween`, `StageIsDegraded`, `EvaluatorWasSkipped`, `EvaluatorReasonIs`). All nodes compose with `And`/`Or`/`Not`. Numeric parsing uses `strtod` (Apple libc++ has no float `from_chars`). 17 unit test cases + 5 integration scenarios, 103/103 tests passing.
-- 004-duckdb-external-storage: Added DuckDB v1.1.3 embedded store satisfying `StateStore` concept. Three-tier hot/warm/cold architecture. `cmake --preset duckdb` to enable. `DuckDbWindowStore` → `as_backend()` → `ExternalWindowStore` — no changes to fallback logic. `WindowedHistoricalEvaluator<Store>` for 30-day lookback. Do NOT call `query_range()` on the hot-path coroutine strand.
-- 003-fleet-shuffle-sharding: Added `FleetRouter` (same Vogels 2014 hash as `TenantRouter`). Non-owners return HTTP 503 + `X-Fre-Redirect-Hint`. Seeds in `include/fre/sharding/hash_seeds.hpp` — never change or duplicate. Use non-power-of-2 fleet sizes for strong isolation. Fleet enabled via `HarnessConfig::fleet_config` (optional).
 
   (ingest → lightweight eval → ML inference → policy eval → decision emit), shuffle-sharded
   multi-tenant isolation, in-process windowed aggregation with optional external state backend.

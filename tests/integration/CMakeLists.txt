@@ -94,4 +94,13 @@ if(FRE_ENABLE_DUCKDB)
     catch_discover_tests(fre_integration_duckdb_backend
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         PROPERTIES TIMEOUT 120)
+
+    add_executable(fre_integration_realistic_load_p99 test_realistic_load_p99.cpp)
+    target_link_libraries(fre_integration_realistic_load_p99
+        PRIVATE fre::pipeline Catch2::Catch2WithMain)
+    target_compile_options(fre_integration_realistic_load_p99 PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>)
+    catch_discover_tests(fre_integration_realistic_load_p99
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        PROPERTIES TIMEOUT 180)
 endif()

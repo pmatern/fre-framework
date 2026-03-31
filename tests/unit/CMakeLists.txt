@@ -74,4 +74,14 @@ if(FRE_ENABLE_DUCKDB)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>)
     catch_discover_tests(fre_unit_write_back_window_store
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+
+    add_executable(fre_unit_realistic_latency_benchmark test_realistic_latency_benchmark.cpp)
+    target_link_libraries(fre_unit_realistic_latency_benchmark
+        PRIVATE fre::pipeline Catch2::Catch2WithMain)
+    target_compile_options(fre_unit_realistic_latency_benchmark PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>)
+    catch_discover_tests(fre_unit_realistic_latency_benchmark
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        EXTRA_ARGS --benchmark-samples 3
+        PROPERTIES TIMEOUT 120)
 endif()

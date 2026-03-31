@@ -68,7 +68,7 @@ target_include_directories(fre_pipeline
 target_link_libraries(fre_pipeline
     PUBLIC
         $<BUILD_INTERFACE:asio::asio>
-        $<BUILD_INTERFACE:quill::quill>
+        $<BUILD_INTERFACE:spdlog::spdlog>
     PRIVATE
         # implementation-only linkage
 )
