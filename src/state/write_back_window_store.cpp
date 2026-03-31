@@ -141,7 +141,7 @@ void WriteBackWindowStore::do_flush(std::unordered_set<WindowKey> dirty_snap,
     for (const auto& key : expired_snap) {
         // Ignore failures: if DuckDB is down the row will be overwritten on recovery
         // (upsert_batch uses version from in-memory which has moved past the expired key).
-        warm_->expire(key);
+        (void)warm_->expire(key);
     }
 }
 
@@ -166,7 +166,7 @@ void WriteBackWindowStore::load_warm_tier() {
         // In-memory is empty at startup; CAS from {0,0} seeds the value.
         // If the key somehow already exists (shouldn't happen on fresh start),
         // this is a no-op (CAS returns false but that's fine).
-        primary_->compare_and_swap(key, WindowValue{}, val);
+        (void)primary_->compare_and_swap(key, WindowValue{}, val);
         // Deliberately NOT adding to dirty_set_: these reads from DuckDB
         // are already persisted — no need to write them back.
     }

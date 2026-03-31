@@ -67,6 +67,9 @@ std::expected<StageOutput, Error> EmitStage::process(Decision decision) {
             out.evaluator_results.push_back(EvaluatorResult{
                 .evaluator_id = "emission_target",
                 .verdict      = Verdict::Pass,
+                .reason_code  = {},
+                .score        = {},
+                .metadata     = {},
             });
         }
     }

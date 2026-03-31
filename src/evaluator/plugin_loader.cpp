@@ -63,6 +63,7 @@ std::expected<EvaluatorResult, EvaluatorError> EvaluatorHandle::evaluate(const E
         return std::unexpected(EvaluatorError{
             .code         = EvaluatorErrorCode::NotInitialized,
             .evaluator_id = std::string{evaluator_id()},
+            .detail       = {},
         });
     }
 

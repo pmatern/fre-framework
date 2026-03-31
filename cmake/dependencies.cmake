@@ -24,7 +24,8 @@ CPMAddPackage(
 if(asio_ADDED)
     add_library(asio INTERFACE)
     add_library(asio::asio ALIAS asio)
-    target_include_directories(asio INTERFACE "${asio_SOURCE_DIR}/asio/include")
+    # SYSTEM suppresses third-party warnings (e.g. -Wdeprecated-declarations in clang 20)
+    target_include_directories(asio SYSTEM INTERFACE "${asio_SOURCE_DIR}/asio/include")
     target_compile_definitions(asio INTERFACE
         ASIO_STANDALONE
         ASIO_NO_DEPRECATED
@@ -32,12 +33,17 @@ if(asio_ADDED)
     )
 endif()
 
-# ─── quill (structured logging) ──────────────────────────────────────────────
+# ─── spdlog (structured logging) ─────────────────────────────────────────────
+# SPDLOG_USE_STD_FORMAT: use C++23 <format> instead of bundled fmtlib so that
+# the FMT_STRING/FMT_COMPILE_STRING consteval issue in clang 20 is avoided.
 CPMAddPackage(
-    NAME quill
-    VERSION 4.5.0
-    URL "https://github.com/odygrd/quill/archive/refs/tags/v4.5.0.tar.gz"
+    NAME spdlog
+    VERSION 1.14.1
+    URL "https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz"
+    OPTIONS
+        "SPDLOG_USE_STD_FORMAT ON"
 )
+
 
 # ─── Catch2 (testing) ────────────────────────────────────────────────────────
 if(FRE_BUILD_TESTS)
@@ -97,8 +103,8 @@ endif()
 if(FRE_ENABLE_DUCKDB)
     CPMAddPackage(
         NAME duckdb
-        VERSION 1.1.3
-        URL "https://github.com/duckdb/duckdb/releases/download/v1.1.3/libduckdb-src.zip"
+        VERSION 1.4.0
+        URL "https://github.com/duckdb/duckdb/releases/download/v1.4.0/libduckdb-src.zip"
         DOWNLOAD_ONLY YES
     )
 
@@ -115,6 +121,13 @@ if(FRE_ENABLE_DUCKDB)
         # Suppress warnings inside the amalgamation (not our code)
         target_compile_options(duckdb_amalgamation PRIVATE
             $<$<CXX_COMPILER_ID:GNU,Clang>:-w>
+        )
+
+        # cpp-httplib (bundled in amalgamation) calls std::current_exception() via an
+        # incomplete exception_ptr on libc++ 16+. CPPHTTPLIB_NO_EXCEPTIONS compiles
+        # out those paths; we don't use DuckDB's HTTP extension.
+        target_compile_definitions(duckdb_amalgamation PRIVATE
+            CPPHTTPLIB_NO_EXCEPTIONS
         )
 
         find_package(Threads REQUIRED)

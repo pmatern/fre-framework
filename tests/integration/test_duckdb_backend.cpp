@@ -17,9 +17,11 @@
 #include <fre/pipeline/pipeline.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <chrono>
 #include <filesystem>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 using namespace fre;

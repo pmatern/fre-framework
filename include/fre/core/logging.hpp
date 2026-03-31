@@ -2,12 +2,11 @@
 
 #include <fre/core/decision.hpp>
 
-#include <quill/Logger.h>
-#include <quill/LogMacros.h>
+#include <spdlog/logger.h>
 
 #include <cstdint>
+#include <memory>
 #include <string>
-#include <string_view>
 
 namespace fre {
 
@@ -53,23 +52,22 @@ void flush_logging();
 // ─── Internal accessor (do not call from user code) ──────────────────────────
 
 namespace detail {
-quill::Logger* diagnostic_logger() noexcept;
-quill::Logger* audit_logger() noexcept;
+std::shared_ptr<spdlog::logger> diagnostic_logger() noexcept;
+std::shared_ptr<spdlog::logger> audit_logger() noexcept;
 }  // namespace detail
 
 // ─── Audit record emission ───────────────────────────────────────────────────
 
 /// Serialize a Decision to a single NDJSON line and write to the audit logger.
-/// Non-blocking: encodes key fields into the SPSC ring buffer on the calling thread.
 void log_audit(const Decision& decision);
 
 }  // namespace fre
 
 // ─── Diagnostic logging macros ───────────────────────────────────────────────
-// Use these instead of calling quill directly so the logger handle is managed centrally.
+// Use these instead of calling spdlog directly so the logger handle is managed centrally.
 
-#define FRE_LOG_TRACE(fmt, ...)   do { if (auto* _l = ::fre::detail::diagnostic_logger()) LOG_TRACE_L1(_l, fmt, ##__VA_ARGS__); } while(0)
-#define FRE_LOG_DEBUG(fmt, ...)   do { if (auto* _l = ::fre::detail::diagnostic_logger()) LOG_DEBUG(_l, fmt, ##__VA_ARGS__); } while(0)
-#define FRE_LOG_INFO(fmt, ...)    do { if (auto* _l = ::fre::detail::diagnostic_logger()) LOG_INFO(_l, fmt, ##__VA_ARGS__); } while(0)
-#define FRE_LOG_WARNING(fmt, ...) do { if (auto* _l = ::fre::detail::diagnostic_logger()) LOG_WARNING(_l, fmt, ##__VA_ARGS__); } while(0)
-#define FRE_LOG_ERROR(fmt, ...)   do { if (auto* _l = ::fre::detail::diagnostic_logger()) LOG_ERROR(_l, fmt, ##__VA_ARGS__); } while(0)
+#define FRE_LOG_TRACE(fmt, ...)   do { if (auto _l = ::fre::detail::diagnostic_logger()) _l->trace(fmt __VA_OPT__(,) __VA_ARGS__); } while(0)
+#define FRE_LOG_DEBUG(fmt, ...)   do { if (auto _l = ::fre::detail::diagnostic_logger()) _l->debug(fmt __VA_OPT__(,) __VA_ARGS__); } while(0)
+#define FRE_LOG_INFO(fmt, ...)    do { if (auto _l = ::fre::detail::diagnostic_logger()) _l->info(fmt __VA_OPT__(,) __VA_ARGS__); } while(0)
+#define FRE_LOG_WARNING(fmt, ...) do { if (auto _l = ::fre::detail::diagnostic_logger()) _l->warn(fmt __VA_OPT__(,) __VA_ARGS__); } while(0)
+#define FRE_LOG_ERROR(fmt, ...)   do { if (auto _l = ::fre::detail::diagnostic_logger()) _l->error(fmt __VA_OPT__(,) __VA_ARGS__); } while(0)
