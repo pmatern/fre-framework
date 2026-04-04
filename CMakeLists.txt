@@ -40,6 +40,7 @@ add_library(fre_pipeline)
 add_library(fre::pipeline ALIAS fre_pipeline)
 
 target_sources(fre_pipeline PRIVATE
+    src/pipeline/decision_type.cpp
     src/pipeline/error.cpp
     src/pipeline/logging.cpp
     src/pipeline/pipeline.cpp

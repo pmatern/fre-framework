@@ -1,6 +1,6 @@
 # fre-framework Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-29
+Auto-generated from all feature plans. Last updated: 2026-04-04
 
 ## Active Technologies
 - C++23 (GCC 14+ / Clang 18+) + Asio 1.30.2 (strand dispatch — unchanged), spdlog 1.14.1 (logging), Catch2 3.7.1 (tests — unchanged). No new dependencies. (002-sync-submit-api)
@@ -73,6 +73,7 @@ cmake --build --preset release --target fre-service
 - **No raw owning pointers**: Use `std::unique_ptr` / `std::shared_ptr`; prefer value semantics where possible.
 
 ## Recent Changes
+- 008-configurable-decision-types: Added `DecisionTypeRegistry` (`include/fre/core/decision_type.hpp`) and `ActiveDecision` to support user-defined decision types with configurable combinability. `PolicyStageRule` gains an optional `decision_type_id`; when a registry is configured on the pipeline, the policy stage evaluates **all** matching rules (not just the first), deduplicates per type, applies incompatible-pair conflict resolution (lower priority number wins; equal-priority favours `type_id_a` in the declared pair), and emits one `EvaluatorResult` per surviving type. `Decision` gains `active_decisions: vector<ActiveDecision>` populated by `compute_active_decisions()`. Legacy pipelines (no registry, no `decision_type_id` on rules) are completely unchanged — first-match-wins, no `active_decisions`. Use `PipelineConfig::Builder::decision_types(registry)` and `PolicyStageConfig::add_rule(..., decision_type_id)` to opt in. `Builder::validate()` rejects rules with an unregistered `decision_type_id` or a `decision_type_id` without a registry. `DecisionSerializer` serialises `active_decisions` as a JSON array (omitted when empty). New tests: `tests/unit/test_decision_type_registry.cpp`, `tests/unit/test_policy_multi_decision.cpp`, `tests/integration/test_multi_decision_pipeline.cpp`.
 - 007-realistic-perf-tests: Added two DuckDB-backed performance tests (`FRE_ENABLE_DUCKDB=ON` only): `tests/unit/test_realistic_latency_benchmark.cpp` (Catch2 `BENCHMARK`, P99 measurement with real `AllowDenyEvaluator` + `ThresholdEvaluator<WriteBackWindowStore>` + on-disk DuckDB) and `tests/integration/test_realistic_load_p99.cpp` (10 tenants × 3000 events, P99 ≤ 500ms assertion, per-tenant `Flag`/`Block` verdict checks). Both use PID-based temp file naming and RAII `TempFileGuard` cleanup. The 500ms budget is a conservative CI estimate only — sustained P99 > 300ms in stable conditions is a production constitution violation.
 - 006-write-back-window-store: `WriteBackWindowStore` inverts the DuckDB hot-path relationship — `InProcessWindowStore` is now the authoritative store (< 1ms always); DuckDB is flushed asynchronously in batches by a background `jthread`. Startup recovery seeds in-memory state from DuckDB warm tier. `ThresholdEvaluator<Store>` now a template on `StateStore`. Use `WriteBackWindowStore` instead of `ExternalWindowStore` for new pipelines with DuckDB. `query_range()` flushes dirty entries before querying.
 

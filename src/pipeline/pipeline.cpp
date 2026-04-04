@@ -133,6 +133,11 @@ struct Pipeline::Impl {
         decision.compute_final_verdict();
         decision.merge_degraded_reasons();
 
+        // ─── Resolve active decisions (multi-decision mode) ───────────────────
+        if (config.decision_type_registry.has_value()) {
+            decision.compute_active_decisions(&*config.decision_type_registry);
+        }
+
         // ─── Elapsed time ─────────────────────────────────────────────────────
         const auto elapsed = std::chrono::steady_clock::now() - receipt_time;
         decision.elapsed_us = static_cast<uint64_t>(
@@ -208,7 +213,14 @@ std::expected<void, Error> Pipeline::start() {
     }
 
     if (impl_->config.policy_config) {
-        impl_->policy = std::make_unique<PolicyStage>(*impl_->config.policy_config);
+        // Pass registry pointer when present. The registry is owned by impl_->config
+        // and is stable for the pipeline lifetime — do not move config after start().
+        const DecisionTypeRegistry* registry =
+            impl_->config.decision_type_registry.has_value()
+                ? &*impl_->config.decision_type_registry
+                : nullptr;
+        impl_->policy = std::make_unique<PolicyStage>(
+            *impl_->config.policy_config, registry);
     }
 
     impl_->emit = std::make_unique<EmitStage>(impl_->config.emit_config);

@@ -76,6 +76,11 @@ struct EvaluatorResult {
 
     /// Optional opaque metadata string (JSON or plain text).
     std::optional<std::string> metadata;
+
+    /// For policy stage results: the registered decision type ID, if this
+    /// evaluator result was produced by a multi-decision rule.
+    /// nullopt for all eval/inference results and legacy policy rules.
+    std::optional<std::string> decision_type_id;
 };
 
 // ─── CompositionRule ─────────────────────────────────────────────────────────

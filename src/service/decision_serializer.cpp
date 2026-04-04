@@ -75,6 +75,18 @@ std::string DecisionSerializer::to_json(const Decision& d) {
     }
     j["stage_outputs"] = std::move(stages_arr);
 
+    if (!d.active_decisions.empty()) {
+        json active_arr = json::array();
+        for (const auto& ad : d.active_decisions) {
+            json entry;
+            entry["decision_type_id"] = ad.decision_type_id;
+            entry["rule_id"]          = ad.rule_id;
+            entry["priority"]         = ad.priority;
+            active_arr.push_back(std::move(entry));
+        }
+        j["active_decisions"] = std::move(active_arr);
+    }
+
     return j.dump();
 }
 
@@ -100,6 +112,16 @@ std::expected<Decision, Error> DecisionSerializer::from_json(std::string_view js
                 so.verdict     = str_to_verdict(sj.value("verdict", "pass"));
                 so.elapsed_us  = sj.value("elapsed_us", uint64_t{0});
                 d.stage_outputs.push_back(std::move(so));
+            }
+        }
+
+        if (j.contains("active_decisions")) {
+            for (const auto& aj : j["active_decisions"]) {
+                ActiveDecision ad;
+                ad.decision_type_id = aj.value("decision_type_id", "");
+                ad.rule_id          = aj.value("rule_id", "");
+                ad.priority         = aj.value("priority", uint32_t{0});
+                d.active_decisions.push_back(std::move(ad));
             }
         }
 

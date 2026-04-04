@@ -88,6 +88,26 @@ std::optional<ConfigError> PipelineConfig::Builder::validate() const {
                     };
                 }
             }
+
+            // Any rule with a decision_type_id must reference a registered type.
+            if (psr.decision_type_id.has_value()) {
+                if (!config_.decision_type_registry.has_value()) {
+                    return ConfigError{
+                        ConfigErrorCode::InvalidPolicyRule,
+                        std::format("policy rule '{}' has a decision_type_id but no "
+                                    "DecisionTypeRegistry is configured on the pipeline",
+                                    psr.rule_id.empty() ? "(unnamed)" : psr.rule_id)
+                    };
+                }
+                if (!config_.decision_type_registry->find(*psr.decision_type_id)) {
+                    return ConfigError{
+                        ConfigErrorCode::InvalidPolicyRule,
+                        std::format("policy rule '{}' references unregistered decision type '{}'",
+                                    psr.rule_id.empty() ? "(unnamed)" : psr.rule_id,
+                                    *psr.decision_type_id)
+                    };
+                }
+            }
         }
     }
 

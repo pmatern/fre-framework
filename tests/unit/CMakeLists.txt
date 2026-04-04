@@ -48,6 +48,16 @@ fre_add_test(
     SOURCES test_policy_leaf_nodes.cpp
 )
 
+fre_add_test(
+    TARGET fre_unit_decision_type_registry
+    SOURCES test_decision_type_registry.cpp
+)
+
+fre_add_test(
+    TARGET fre_unit_policy_multi_decision
+    SOURCES test_policy_multi_decision.cpp
+)
+
 if(FRE_BUILD_SERVICE)
     add_executable(fre_unit_fleet_router test_fleet_router.cpp)
     target_link_libraries(fre_unit_fleet_router
