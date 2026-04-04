@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fre/core/concepts.hpp>
+#include <fre/core/decision_type.hpp>
 #include <fre/core/error.hpp>
 #include <fre/core/verdict.hpp>
 #include <fre/policy/rule_engine.hpp>
@@ -134,6 +135,12 @@ struct PolicyStageRule {
     int                priority{0};    ///< Lower value = evaluated first.
     Verdict            action_verdict{Verdict::Block};
     std::string        rule_id;
+
+    /// When set, this rule participates in multi-decision evaluation:
+    /// all matching rules are collected, combinability constraints are applied,
+    /// and each surviving match emits an ActiveDecision of this type.
+    /// nullopt = legacy first-match-wins behaviour (unchanged).
+    std::optional<std::string> decision_type_id;
 };
 
 // ─── PolicyStageConfig ───────────────────────────────────────────────────────
@@ -165,8 +172,42 @@ struct PolicyStageConfig {
         rules.push_back(PolicyStageRule{
             std::move(rule), priority, action_verdict, std::move(rule_id)});
         std::sort(rules.begin(), rules.end(),
-                  [](const PolicyStageRule& a, const PolicyStageRule& b) {
-                      return a.priority < b.priority;
+                  [](const PolicyStageRule& lhs, const PolicyStageRule& rhs) {
+                      return lhs.priority < rhs.priority;
+                  });
+        return std::move(*this);
+    }
+
+    /// Register a rule that participates in multi-decision evaluation.
+    /// When a DecisionTypeRegistry is configured on the pipeline, all matching
+    /// rules (not just the first) are collected, combinability constraints are
+    /// applied, and each surviving match emits an ActiveDecision of the given type.
+    PolicyStageConfig& add_rule(policy::PolicyRule rule,
+                                int priority,
+                                Verdict action_verdict,
+                                std::string rule_id,
+                                std::string decision_type_id) & {
+        PolicyStageRule psr{std::move(rule), priority, action_verdict, std::move(rule_id)};
+        psr.decision_type_id = std::move(decision_type_id);
+        rules.push_back(std::move(psr));
+        std::sort(rules.begin(), rules.end(),
+                  [](const PolicyStageRule& lhs, const PolicyStageRule& rhs) {
+                      return lhs.priority < rhs.priority;
+                  });
+        return *this;
+    }
+
+    PolicyStageConfig&& add_rule(policy::PolicyRule rule,
+                                 int priority,
+                                 Verdict action_verdict,
+                                 std::string rule_id,
+                                 std::string decision_type_id) && {
+        PolicyStageRule psr{std::move(rule), priority, action_verdict, std::move(rule_id)};
+        psr.decision_type_id = std::move(decision_type_id);
+        rules.push_back(std::move(psr));
+        std::sort(rules.begin(), rules.end(),
+                  [](const PolicyStageRule& lhs, const PolicyStageRule& rhs) {
+                      return lhs.priority < rhs.priority;
                   });
         return std::move(*this);
     }
@@ -257,6 +298,12 @@ struct PipelineConfig {
     std::optional<PolicyStageConfig>  policy_config;
     EmitStageConfig                   emit_config;  // always required
 
+    /// Optional registry of named decision types and their combinability rules.
+    /// When present, policy rules with a decision_type_id participate in
+    /// multi-decision evaluation (all-rules, then combinability filtering).
+    /// When absent, all policy rules use legacy first-match-wins semantics.
+    std::optional<DecisionTypeRegistry> decision_type_registry;
+
     // ─── Builder ─────────────────────────────────────────────────────────────
     // Defined after PipelineConfig is complete (below) because it stores a
     // PipelineConfig by value, which requires the complete type.
@@ -319,6 +366,11 @@ public:
 
     Builder& policy_config(PolicyStageConfig cfg) {
         return policy_eval(std::move(cfg));
+    }
+
+    Builder& decision_types(DecisionTypeRegistry registry) {
+        config_.decision_type_registry = std::move(registry);
+        return *this;
     }
 
     Builder& emit_config(EmitStageConfig cfg) {

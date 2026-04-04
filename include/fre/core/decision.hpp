@@ -1,5 +1,6 @@
 #pragma once
 
+#include <fre/core/decision_type.hpp>
 #include <fre/core/event.hpp>
 #include <fre/core/verdict.hpp>
 
@@ -54,6 +55,11 @@ struct Decision {
     /// End-to-end latency from event receipt to decision assembly (microseconds).
     uint64_t elapsed_us{0};
 
+    /// Active decisions after combinability filtering, sorted by priority ascending
+    /// (highest-precedence first). Populated by compute_active_decisions().
+    /// Empty when no policy stage is configured or no decision_type_ids are assigned.
+    std::vector<ActiveDecision> active_decisions;
+
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     /// Compute final_verdict from stage_outputs (call after all stages complete).
@@ -79,6 +85,12 @@ struct Decision {
         }
         return nullptr;
     }
+
+    /// Populate active_decisions from the policy stage's evaluator results.
+    /// Reads EvaluatorResults that carry a decision_type_id (set by the policy
+    /// stage's multi-decision path), resolves priorities from the registry, and
+    /// sorts by priority ascending. No-op if registry is nullptr.
+    void compute_active_decisions(const DecisionTypeRegistry* registry) noexcept;
 };
 
 }  // namespace fre

@@ -36,6 +36,11 @@ fre_add_test(
 )
 
 fre_add_test(
+    TARGET fre_integration_multi_decision
+    SOURCES test_multi_decision_pipeline.cpp
+)
+
+fre_add_test(
     TARGET fre_integration_external_store_fallback
     SOURCES test_external_store_fallback.cpp
 )
