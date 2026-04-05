@@ -1,2 +1,3 @@
 add_subdirectory(minimal_pipeline)
 add_subdirectory(ml_pipeline)
+add_subdirectory(multi_decision_pipeline)
